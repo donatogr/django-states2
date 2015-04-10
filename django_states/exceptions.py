@@ -35,9 +35,12 @@ class UnknownTransition(TransitionException):
 
 
 class TransitionNotFound(TransitionException):
-    def __init__(self, model, from_state, to_state):
-        TransitionException.__init__(self, "Transition from '%s' to '%s' on %s not found" %
-                    (from_state, to_state, model.__name__))
+    def __init__(self, model, from_state, to_state, transition_name=None):
+        if from_state is not None and to_state is not None:
+            msg = "Transition from '%s' to '%s' on %s not found" % (from_state, to_state, model.__name__)
+        else:
+            msg = "Transition with name '%s' on %s not found" % (transition_name, model.__name__)
+        TransitionException.__init__(self, msg)
 
 
 class TransitionCannotStart(TransitionException):

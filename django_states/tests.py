@@ -350,6 +350,10 @@ class StateMachineTestCase(TransactionTestCase):
             T3Machine.get_transition_from_states('running', 'crashed')
         self.assertTrue(T3Machine.has_transition('startup'))
         self.assertFalse(T3Machine.has_transition('crash'))
+        trion = T3Machine.get_transition('startup')
+        with self.assertRaises(TransitionNotFound):
+            T3Machine.get_transition('crash')
+        # Deprecated methods
         trion = T3Machine.get_transitions('startup')
         self.assertFalse(hasattr(trion, 'from_state'))
         self.assertEqual(trion.from_states[0], 'stopped')

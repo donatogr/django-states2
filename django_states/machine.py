@@ -80,6 +80,19 @@ class StateMachineMeta(type):
         """
         return transition_name in self.transitions
 
+    def get_transition(self, transition_name):
+        """
+        Gets a transition with the given name.
+
+        :param str transition_name: the transition name
+
+        :returns: the :class:`StateTransition` or raises a :class:`TransitionNotFound`
+        """
+        try:
+            return self.transitions[transition_name]
+        except KeyError:
+            raise TransitionNotFound(self, None, None, transition_name)
+
     def get_transitions(self, transition_name):
         """
         Gets a transition with the given name.
@@ -88,6 +101,9 @@ class StateMachineMeta(type):
 
         :returns: the :class:`StateTransition` or raises a :class:`KeyError`
         """
+        import warnings
+        warnings.warn("%s.get_transitions is deprecated, use `get_transition` instead.",
+                      DeprecationWarning, 2)
         return self.transitions[transition_name]
 
     def has_state(self, state_name):
