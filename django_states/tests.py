@@ -4,8 +4,13 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.test import TransactionTestCase
 
-from django_states.exceptions import (PermissionDenied, TransitionNotFound,
-                                      UnknownState, UnknownTransition)
+from django_states.exceptions import (GroupDefinitionException,
+                                      MachineDefinitionException,
+                                      PermissionDenied,
+                                      StateDefinitionException,
+                                      TransitionDefinitionException,
+                                      TransitionNotFound, UnknownState,
+                                      UnknownTransition)
 from django_states.fields import StateField
 from django_states.machine import (StateDefinition, StateGroup, StateMachine,
                                    StateTransition)
@@ -135,7 +140,7 @@ class DjangoStateLogClass(models.Model):
 class StateMachineTestCase(TransactionTestCase):
 
     def test_initial_states(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(MachineDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -145,7 +150,7 @@ class StateMachineTestCase(TransactionTestCase):
                     description = 'running state'
                     initial = True
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(MachineDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -153,18 +158,18 @@ class StateMachineTestCase(TransactionTestCase):
                 class running(StateDefinition):
                     description = 'running state'
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(StateDefinitionException):
             class T1Machine(StateMachine):
                 class START(StateDefinition):
                     description = 'start state'
                     initial = True
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(StateDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     initial = True
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(GroupDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -176,7 +181,7 @@ class StateMachineTestCase(TransactionTestCase):
                 class not_runing(StateGroup):
                     pass
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(GroupDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -189,7 +194,7 @@ class StateMachineTestCase(TransactionTestCase):
                     states = ['start']
                     exclude_states = ['running']
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(GroupDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -201,7 +206,7 @@ class StateMachineTestCase(TransactionTestCase):
                 class not_runing(StateGroup):
                     states = 'start'
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(GroupDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -213,7 +218,7 @@ class StateMachineTestCase(TransactionTestCase):
                 class not_runing(StateGroup):
                     exclude_states = 'running'
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(TransitionDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -227,7 +232,7 @@ class StateMachineTestCase(TransactionTestCase):
                     to_state = 'running'
                     description = 'Start up the machine!'
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(TransitionDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -243,7 +248,7 @@ class StateMachineTestCase(TransactionTestCase):
                     to_state = 'running'
                     description = 'Start up the machine!'
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(TransitionDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -257,7 +262,7 @@ class StateMachineTestCase(TransactionTestCase):
                     from_state = 'start'
                     description = 'Start up the machine!'
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(TransitionDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -271,7 +276,7 @@ class StateMachineTestCase(TransactionTestCase):
                     from_state = 'start'
                     to_state = 'running'
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(StateDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -283,7 +288,7 @@ class StateMachineTestCase(TransactionTestCase):
                     def handler(self):
                         pass
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(TransitionDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'

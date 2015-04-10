@@ -53,16 +53,32 @@ class TransitionNotValidated(TransitionException):
         self.validation_errors = validation_errors
 
 
-class MachineDefinitionException(States2Exception):
-    def __init__(self, machine, description):
-        States2Exception.__init__(self, 'Error in state machine definition: ' + description)
-
-
 class TransitionValidationError(TransitionException):
     """
     Errors yielded from StateTransition.validate.
     """
     pass
+
+# ==========[ Definition exceptions ]==========
+
+class DefinitionException(States2Exception):
+    pass
+
+class MachineDefinitionException(DefinitionException):
+    def __init__(self, machine, description):
+        DefinitionException.__init__(self, 'Error in state machine (%s) definition: %s' % (machine.__name__, description))
+
+class StateDefinitionException(DefinitionException):
+    def __init__(self, description):
+        DefinitionException.__init__(self, 'Error in state definition: ' + description)
+
+class GroupDefinitionException(DefinitionException):
+    def __init__(self, description):
+        DefinitionException.__init__(self, 'Error in state group definition: ' + description)
+
+class TransitionDefinitionException(DefinitionException):
+    def __init__(self, description):
+        DefinitionException.__init__(self, 'Error in state transition definition: ' + description)
 
 
 # ==========[ Other exceptions ]==========
