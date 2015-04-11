@@ -1,6 +1,6 @@
 DOCS_MAKE_CMD = html dirhtml latex latexpdf
 
-.PHONY: $(DOCS_MAKE_CMD) docs clean test coverage
+.PHONY: $(DOCS_MAKE_CMD) docs clean test coverage authors
 
 docs: $(DOCS_MAKE_CMD)
 
@@ -17,3 +17,7 @@ coverage:
 	coverage run --source='.' test_proj/runtests.py
 	coverage html --include="django_states*" --omit="*test*" --directory=.direnv/htmlcov
 	coverage report --include="django_states*" --omit="*test*"
+
+authors:
+	@echo "Updating AUTHORS file"
+	@rm -f AUTHORS && git log --all --format="%aN <%aE>" | sort -u > AUTHORS
