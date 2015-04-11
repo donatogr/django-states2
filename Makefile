@@ -9,6 +9,8 @@ $(DOCS_MAKE_CMD):
 
 clean: docs_clean
 	$(MAKE) -C docs clean
+	rm -rf dist django_states.egg-info
+	find . -name '*pyc' -delete
 
 test:
 	tox
