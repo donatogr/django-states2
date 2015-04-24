@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 """Views"""
 
-from django.db.models import get_model
 from django.http import (HttpResponseRedirect, HttpResponseForbidden,
                          HttpResponse,)
 from django.shortcuts import get_object_or_404
+try:
+    from django.apps import apps
+    get_model = apps.get_model
+except ImportError:
+    from django.db.models import get_model
 
 from django_states.exceptions import PermissionDenied
 

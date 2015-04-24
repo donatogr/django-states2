@@ -5,7 +5,11 @@ from yapgvb import Graph
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import get_model
+try:
+    from django.apps import apps
+    get_model = apps.get_model
+except ImportError:
+    from django.db.models import get_model
 
 logger = logging.getLogger(__name__)
 
