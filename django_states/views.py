@@ -1,9 +1,15 @@
 # -*- coding: utf-8 -*-
 """Views"""
+import json
 
+from django.db.models import FieldDoesNotExist
 from django.http import (HttpResponseRedirect, HttpResponseForbidden,
-                         HttpResponse,)
-from django.shortcuts import get_object_or_404
+                         HttpResponse, Http404)
+from django.shortcuts import get_object_or_404, render
+from django.utils.safestring import mark_safe
+
+from django.contrib.admindocs.views import ModelDetailView
+
 try:
     from django.apps import apps
     get_model = apps.get_model
@@ -11,6 +17,32 @@ except ImportError:
     from django.db.models import get_model
 
 from django_states.exceptions import PermissionDenied
+from django_states.utils import graph_elements_for_model
+
+
+class StateMachineView(ModelDetailView):
+    template_name = 'django_states/display_state_machine.html'
+
+    def get_context_data(self, **kwargs):
+        #context_data['field_name'] = kwargs['field_name']
+        context_data = super(StateMachineView, self).get_context_data(**kwargs)
+        context_data['graph_elements'] = get_state_machine_graph_elements(**context_data)
+        return context_data
+
+
+def get_state_machine_graph_elements(app_label, model_name, field_name, **kwargs):
+    try:
+        model_class = get_model(app_label, model_name)
+    except LookupError:
+        raise Http404
+
+    try:
+        field = model_class._meta.get_field(field_name)
+    except FieldDoesNotExist:
+        raise Http404
+
+    data = graph_elements_for_model(model_class, field_name)
+    return mark_safe(json.dumps(data))
 
 
 def make_state_transition(request):
