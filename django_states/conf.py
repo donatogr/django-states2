@@ -2,7 +2,6 @@
 """Configuration options"""
 from django.conf import settings
 
-
 #: The basic configuration
 base_conf = getattr(settings, 'STATES2_CONF', {})
 

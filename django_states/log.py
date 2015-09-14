@@ -8,14 +8,15 @@ Suport for Django 1.5 custom user model.
 import json
 import sys
 
+from django.conf import settings
 from django.db import models
 from django.db.models.base import ModelBase
 from django.utils.translation import ugettext_lazy as _
-from django.conf import settings
 
 from django_states import conf
 from django_states.fields import StateField
-from django_states.machine import StateMachine, StateDefinition, StateTransition
+from django_states.machine import (StateDefinition, StateMachine,
+                                   StateTransition)
 
 
 def _create_state_log_model(state_model, field_name, machine):

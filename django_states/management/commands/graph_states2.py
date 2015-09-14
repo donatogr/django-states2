@@ -1,10 +1,12 @@
 import logging
 import os
 from optparse import make_option
-from yapgvb import Graph
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
+
+from yapgvb import Graph
+
 try:
     from django.apps import apps
     get_model = apps.get_model

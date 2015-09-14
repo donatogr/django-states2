@@ -3,15 +3,17 @@
 
 __all__ = ('StateMachine', 'StateDefinition', 'StateTransition')
 
-from collections import defaultdict
 import logging
+from collections import defaultdict
 
 from django.contrib import messages
-from django_states.exceptions import (TransitionNotFound, TransitionValidationError,
-                                UnknownState, TransitionException,
-                                MachineDefinitionException, StateDefinitionException,
-                                GroupDefinitionException, TransitionDefinitionException)
 
+from django_states.exceptions import (GroupDefinitionException,
+                                      MachineDefinitionException,
+                                      StateDefinitionException,
+                                      TransitionDefinitionException,
+                                      TransitionException, TransitionNotFound,
+                                      TransitionValidationError, UnknownState)
 
 logger = logging.getLogger(__name__)
 

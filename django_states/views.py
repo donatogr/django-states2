@@ -2,22 +2,21 @@
 """Views"""
 import json
 
+from django.contrib.admindocs.views import ModelDetailView
 from django.db.models import FieldDoesNotExist
-from django.http import (HttpResponseRedirect, HttpResponseForbidden,
-                         HttpResponse, Http404)
+from django.http import (Http404, HttpResponse, HttpResponseForbidden,
+                         HttpResponseRedirect)
 from django.shortcuts import get_object_or_404, render
 from django.utils.safestring import mark_safe
 
-from django.contrib.admindocs.views import ModelDetailView
+from django_states.exceptions import PermissionDenied
+from django_states.utils import graph_elements_for_model
 
 try:
     from django.apps import apps
     get_model = apps.get_model
 except ImportError:
     from django.db.models import get_model
-
-from django_states.exceptions import PermissionDenied
-from django_states.utils import graph_elements_for_model
 
 
 class StateMachineView(ModelDetailView):

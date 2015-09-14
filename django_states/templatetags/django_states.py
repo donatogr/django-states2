@@ -1,6 +1,5 @@
-from django.template import Node, NodeList, Variable
-from django.template import TemplateSyntaxError, VariableDoesNotExist
-from django.template import Library
+from django.template import (Library, Node, NodeList, TemplateSyntaxError,
+                             Variable, VariableDoesNotExist)
 
 register = Library()
 
