@@ -18,7 +18,7 @@
 <h1>{{ name }} - {{ field_name }}</h1>
 <h2 class="subhead">{% trans 'State machine' %}</h2>
 
-<div id="graph-container" style="height: 640px; width: 640px"></div>
+<div id="graph-container" style="height: 640px; width: 90%"></div>
 <script src="{% static "django_states/cytoscape.min.js" %}"></script>
 <script src="{% static "django_states/dagre.min.js" %}"></script>
 
@@ -31,7 +31,7 @@
 			{
 				selector: 'node',
 				css: {
-					'content': 'data(id)',
+					'content': 'data(name)',
 					'text-valign': 'center',
 					'text-halign': 'center'
 				}
@@ -39,6 +39,7 @@
 			{
 				selector: 'edge',
 				css: {
+					'content': 'data(id)',
 					'target-arrow-shape': 'triangle'
 				}
 			}
