@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class StateMachineMeta(type):
-    def __new__(c, name, bases, attrs):
+    def __new__(cls, name, bases, attrs):
         """
         Validate state machine, and make ``states``, ``transitions`` and
         ``initial_state`` attributes available.
@@ -39,7 +39,7 @@ class StateMachineMeta(type):
                     if not initial_state:
                         initial_state = a
                     else:
-                        raise MachineDefinitionException(c, 'Machine defines multiple initial states')
+                        raise MachineDefinitionException(cls, 'Machine defines multiple initial states')
 
             # All transitions are derived from StateTransition and should be
             # addressable by Machine.transitions
@@ -56,7 +56,7 @@ class StateMachineMeta(type):
         # At least one initial state required. (But don't throw error for the
         # base defintion.)
         if not initial_state and bases != (object,):
-            raise MachineDefinitionException(c, 'Machine does not define initial state')
+            raise MachineDefinitionException(cls, 'Machine does not define initial state')
 
         attrs['states'] = states
         attrs['transitions'] = transitions
@@ -69,7 +69,7 @@ class StateMachineMeta(type):
         for t in transitions.values():
             t.to_state_description = states[t.to_state].description
 
-        return type.__new__(c, name, bases, attrs)
+        return type.__new__(cls, name, bases, attrs)
 
     def has_transition(self, transition_name):
         """
@@ -168,7 +168,7 @@ class StateMachineMeta(type):
 
 
 class StateDefinitionMeta(type):
-    def __new__(c, name, bases, attrs):
+    def __new__(cls, name, bases, attrs):
         """
         Validate state definition
         """
@@ -185,11 +185,11 @@ class StateDefinitionMeta(type):
         if 'handler' in attrs:
             attrs['handler'] = classmethod(attrs['handler'])
 
-        return type.__new__(c, name, bases, attrs)
+        return type.__new__(cls, name, bases, attrs)
 
 
 class StateGroupMeta(type):
-    def __new__(c, name, bases, attrs):
+    def __new__(cls, name, bases, attrs):
         """
         Validate state group definition
         """
@@ -205,11 +205,11 @@ class StateGroupMeta(type):
             elif 'states' in attrs and not isinstance(attrs['states'], (list, set)):
                 raise GroupDefinitionException('Please give a list (or set) of states to this state group')
 
-        return type.__new__(c, name, bases, attrs)
+        return type.__new__(cls, name, bases, attrs)
 
 
 class StateTransitionMeta(type):
-    def __new__(c, name, bases, attrs):
+    def __new__(cls, name, bases, attrs):
         """
         Validate state transition definition
         """
@@ -234,7 +234,7 @@ class StateTransitionMeta(type):
             if m in attrs:
                 attrs[m] = classmethod(attrs[m])
 
-        return type.__new__(c, name, bases, attrs)
+        return type.__new__(cls, name, bases, attrs)
 
     def __unicode__(self):
         return '%s: (from %s to %s)' % (unicode(self.description), ' or '.join(self.from_states), self.to_state)

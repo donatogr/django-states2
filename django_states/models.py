@@ -3,8 +3,7 @@
 
 # Author: Jonathan Slenders, CityLive
 
-__doc__ = \
-"""
+__doc__ = """
 
 Base models for every State.
 
@@ -129,11 +128,11 @@ class StateModel(models.Model):
         return self.get_state_info().possible_transitions
 
     @classmethod
-    def get_state_model_name(self):
+    def get_state_model_name(cls):
         """
         Gets the state model
         """
-        return '%s.%s' % (self._meta.app_label, self._meta.object_name)
+        return '%s.%s' % (cls._meta.app_label, cls._meta.object_name)
 
     def can_make_transition(self, transition, user=None):
         """

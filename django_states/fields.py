@@ -68,15 +68,15 @@ class StateField(models.CharField):
 
         # adding extra methods
         setattr(cls, 'get_%s_display' % name,
-            curry(get_STATE_display, field=name, machine=self._machine))
+                curry(get_STATE_display, field=name, machine=self._machine))
         setattr(cls, 'get_%s_transitions' % name,
-            curry(get_STATE_transitions, field=name))
+                curry(get_STATE_transitions, field=name))
         setattr(cls, 'get_public_%s_transitions' % name,
-            curry(get_public_STATE_transitions, field=name))
+                curry(get_public_STATE_transitions, field=name))
         setattr(cls, 'get_%s_info' % name,
-            curry(get_STATE_info, field=name, machine=self._machine))
+                curry(get_STATE_info, field=name, machine=self._machine))
         setattr(cls, 'get_%s_machine' % name,
-            curry(get_STATE_machine, field=name, machine=self._machine))
+                curry(get_STATE_machine, field=name, machine=self._machine))
 
         models.signals.class_prepared.connect(self.finalize, sender=cls)
 
@@ -131,4 +131,4 @@ else:
             },
         ),
 
-        ], ["^django_states\.fields\.StateField"])
+    ], ["^django_states\.fields\.StateField"])

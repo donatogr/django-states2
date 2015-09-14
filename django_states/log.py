@@ -79,7 +79,7 @@ def _create_state_log_model(state_model, field_name, machine):
         Make :class:`_StateTransition` act like it has another name and was
         defined in another model.
         """
-        def __new__(c, name, bases, attrs):
+        def __new__(cls, name, bases, attrs):
 
             new_unicode = u''
             if '__unicode__' in attrs:
@@ -102,7 +102,7 @@ def _create_state_log_model(state_model, field_name, machine):
             if sys.version_info[0] == 2:
                 class_name = str(class_name)
 
-            return ModelBase.__new__(c, class_name, bases, attrs)
+            return ModelBase.__new__(cls, class_name, bases, attrs)
 
     get_state_choices = machine.get_state_choices
 

@@ -15,7 +15,7 @@ class TransitionException(States2Exception):
 class TransitionOnUnsavedObject(TransitionException):
     def __init__(self, instance):
         TransitionException.__init__(self, "Cannot run state transition on unsaved object '%s'. "
-                "Please call save() on this object first." % instance)
+                                           "Please call save() on this object first." % instance)
 
 
 class PermissionDenied(TransitionException):
@@ -25,13 +25,13 @@ class PermissionDenied(TransitionException):
         else:
             username = 'AnonymousUser'
         TransitionException.__init__(self, "Permission for executing the state '%s' has be denied to %s."
-                % (transition, username))
+                                           % (transition, username))
 
 
 class UnknownTransition(TransitionException):
     def __init__(self, instance, transition):
         TransitionException.__init__(self, "Unknown transition '%s' on %s" %
-                    (transition, instance.__class__.__name__))
+                                           (transition, instance.__class__.__name__))
 
 
 class TransitionNotFound(TransitionException):
@@ -46,13 +46,13 @@ class TransitionNotFound(TransitionException):
 class TransitionCannotStart(TransitionException):
     def __init__(self, instance, transition):
         TransitionException.__init__(self, "Transition '%s' on %s cannot start in the state '%s'" %
-                    (transition, instance.__class__.__name__, instance.state))
+                                           (transition, instance.__class__.__name__, instance.state))
 
 
 class TransitionNotValidated(TransitionException):
     def __init__(self, instance, transition, validation_errors):
         TransitionException.__init__(self, "Transition '%s' on %s does not validate (%i errors)" %
-                    (transition, instance.__class__.__name__, len(validation_errors)))
+                                           (transition, instance.__class__.__name__, len(validation_errors)))
         self.validation_errors = validation_errors
 
 
@@ -64,27 +64,32 @@ class TransitionValidationError(TransitionException):
 
 # ==========[ Definition exceptions ]==========
 
+
 class DefinitionException(States2Exception):
     pass
+
 
 class MachineDefinitionException(DefinitionException):
     def __init__(self, machine, description):
         DefinitionException.__init__(self, 'Error in state machine (%s) definition: %s' % (machine.__name__, description))
 
+
 class StateDefinitionException(DefinitionException):
     def __init__(self, description):
         DefinitionException.__init__(self, 'Error in state definition: ' + description)
+
 
 class GroupDefinitionException(DefinitionException):
     def __init__(self, description):
         DefinitionException.__init__(self, 'Error in state group definition: ' + description)
 
+
 class TransitionDefinitionException(DefinitionException):
     def __init__(self, description):
         DefinitionException.__init__(self, 'Error in state transition definition: ' + description)
 
-
 # ==========[ Other exceptions ]==========
+
 
 class UnknownState(States2Exception):
     def __init__(self, state):
