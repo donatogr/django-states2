@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Tests"""
+import json
+
 from django.contrib.auth.models import AnonymousUser, User
 from django.db import models
 from django.test import TransactionTestCase
@@ -18,6 +20,8 @@ from django_states.fields import StateField
 from django_states.machine import (StateDefinition, StateGroup, StateMachine,
                                    StateTransition)
 from django_states.models import StateModel
+from django_states.views import get_state_machine_graph_elements
+from django_states.utils import graph_elements, graph_elements_for_model
 
 
 class TestMachine(StateMachine):
@@ -399,6 +403,10 @@ class StateMachineTestCase(TransactionTestCase):
         self.assertTrue('crashed' in action.short_description)
         self.assertTrue('running' in action.short_description)
         self.assertTrue('Crash the machine!' in action.short_description)
+        # Graph method
+        data = graph_elements('T3Machine', T3Machine)
+        self.assertEqual(len(data['nodes']), 3)
+        self.assertEqual(len(data['edges']), 2)
 
 
 class StateFieldTestCase(TransactionTestCase):
@@ -551,6 +559,15 @@ class StateModelTestCase(TransactionTestCase):
             test.test_transition('start_step_1', user=self.superuser)
         with self.assertRaises(TransitionOnUnsavedObject):
             test.make_transition('start_step_1', user=self.superuser)
+
+    def test_graph_elements_for_model(self):
+        data = graph_elements_for_model(DjangoStateClass, 'state')
+        self.assertEqual(len(data['nodes']), 4)
+        self.assertEqual(len(data['edges']), 4)
+        json_data = get_state_machine_graph_elements(DjangoStateClass._meta.app_label, 'DjangoStateClass', 'state')
+        data = json.loads(json_data)
+        self.assertEqual(len(data['nodes']), 4)
+        self.assertEqual(len(data['edges']), 4)
 
     def test_model_end_to_end(self):
         test = DjangoStateClass(field1=42, field2="Knock? Knock?")
