@@ -6,6 +6,7 @@ import json
 from django_states.exceptions import (PermissionDenied, TransitionCannotStart,
                                       TransitionException,
                                       TransitionNotValidated,
+                                      TransitionOnUnsavedObject,
                                       UnknownTransition)
 from django_states.machine import StateMachineMeta
 from django_states.signals import after_state_execute, before_state_execute
@@ -134,6 +135,9 @@ def get_STATE_info(self, field='state', machine=None):
             if not machine.has_transition(transition):
                 raise UnknownTransition(self, transition)
 
+            if self.pk is None:
+                raise TransitionOnUnsavedObject(self)
+
             t = machine.get_transitions(transition)
 
             if getattr(self, field) not in t.from_states:
@@ -164,6 +168,10 @@ def get_STATE_info(self, field='state', machine=None):
             # Transition name should be known
             if not machine.has_transition(transition):
                 raise UnknownTransition(self, transition)
+
+            if self.pk is None:
+                raise TransitionOnUnsavedObject(self)
+
             t = machine.get_transitions(transition)
 
             _state_log_model = getattr(self, '_%s_log_model' % field, None)

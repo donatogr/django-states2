@@ -9,7 +9,9 @@ from django_states.exceptions import (GroupDefinitionException,
                                       PermissionDenied,
                                       StateDefinitionException,
                                       TransitionDefinitionException,
-                                      TransitionNotFound, UnknownState,
+                                      TransitionNotFound,
+                                      TransitionOnUnsavedObject,
+                                      UnknownState,
                                       UnknownTransition)
 from django_states.fields import StateField
 from django_states.machine import (StateDefinition, StateGroup, StateMachine,
@@ -505,6 +507,14 @@ class StateModelTestCase(TransactionTestCase):
         state_choices = dict(state_choices)
         self.assertTrue('start' in state_choices)
         self.assertEqual(state_choices['start'], 'Starting State.')
+
+    def test_unsaved_model(self):
+        test = DjangoStateClass(field1=42, field2="Knock? Knock?")
+        self.assertFalse(test.can_make_transition('start_step_1', user=self.superuser))
+        with self.assertRaises(TransitionOnUnsavedObject):
+            test.test_transition('start_step_1', user=self.superuser)
+        with self.assertRaises(TransitionOnUnsavedObject):
+            test.make_transition('start_step_1', user=self.superuser)
 
     def test_model_end_to_end(self):
         test = DjangoStateClass(field1=42, field2="Knock? Knock?")
