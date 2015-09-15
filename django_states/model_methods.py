@@ -3,10 +3,12 @@
 
 import json
 
-from django_states.exceptions import PermissionDenied, TransitionCannotStart, \
-    TransitionException, TransitionNotValidated, UnknownTransition
+from django_states.exceptions import (PermissionDenied, TransitionCannotStart,
+                                      TransitionException,
+                                      TransitionNotValidated,
+                                      UnknownTransition)
 from django_states.machine import StateMachineMeta
-from django_states.signals import before_state_execute, after_state_execute
+from django_states.signals import after_state_execute, before_state_execute
 
 
 def get_STATE_transitions(self, field='state'):
