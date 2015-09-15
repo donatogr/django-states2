@@ -18,7 +18,8 @@ def graph_elements(name, machine):
         for from_state in trion.from_states:
             graph['edges'].append(
                 {'data': {
-                    'id': trion_name,
+                    'id': '%s_%s_%s' % (trion_name, from_state, trion.to_state),
+                    'name': trion_name,
                     'source': from_state,
                     'target': trion.to_state
                 }}
