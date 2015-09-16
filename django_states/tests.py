@@ -480,6 +480,8 @@ class StateFieldTestCase(TransactionTestCase):
 
         state_info = test.get_state_info()
         with self.assertRaises(UnknownTransition):
+            state_info.test_transition('i_dont_exist')
+        with self.assertRaises(UnknownTransition):
             state_info.make_transition('unknown_transition', user=self.superuser)
 
     def test_unknown_state(self):
