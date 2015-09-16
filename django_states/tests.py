@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests"""
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AnonymousUser, User
 from django.db import models
 from django.test import TransactionTestCase
 
@@ -429,10 +429,12 @@ class StateFieldTestCase(TransactionTestCase):
         testclass = DjangoState2Class(field1=100, field2="LALALALALA")
         testclass.save()
 
-        kwargs = {'transition': 'start_step_1', 'user': user}
-
         state_info = testclass.get_state_info()
 
+        kwargs = {'transition': 'start_step_1', 'user': user}
+        self.assertRaises(PermissionDenied, state_info.make_transition, **kwargs)
+
+        kwargs = {'transition': 'start_step_1', 'user': AnonymousUser()}
         self.assertRaises(PermissionDenied, state_info.make_transition, **kwargs)
 
     def test_in_group(self):
