@@ -8,6 +8,7 @@ from django_states.exceptions import (GroupDefinitionException,
                                       MachineDefinitionException,
                                       PermissionDenied,
                                       StateDefinitionException,
+                                      TransitionCannotStart,
                                       TransitionDefinitionException,
                                       TransitionNotFound,
                                       TransitionOnUnsavedObject,
@@ -407,6 +408,9 @@ class StateFieldTestCase(TransactionTestCase):
         self.assertEqual(state_info.description, 'Starting State.')
         possible = set([x.get_name() for x in state_info.possible_transitions])
         self.assertEqual(possible, {'start_step_1'})
+        # TransitionCannotStart
+        with self.assertRaises(TransitionCannotStart):
+            state_info.test_transition('step_1_step_3')
         # Shift to the first state
         state_info.make_transition('start_step_1', user=self.superuser)
         self.assertEqual(state_info.name, 'step_1')
