@@ -105,12 +105,18 @@ class TestLogMachine(StateMachine):
         description = "Transition from start to normal"
         public = True
 
+        def handler(cls, instance, user=None, **kwargs):
+            return
+
     class step_1_final_step(StateTransition):
         """Transition from normal to complete"""
         from_state = 'first_step'
         to_state = 'final_step'
         description = "Transition from normal to complete"
         public = True
+
+        def handler(cls, instance, user=None, **kwargs):
+            raise Exception
 
 # ----- Django Test Models ------
 
@@ -554,13 +560,88 @@ class StateLogTestCase(TransactionTestCase):
         self.assertEqual(test.state, 'start')
         self.assertEqual(state_info.name, test.state)
         # Make transition
-        state_info.make_transition('start_step_1', user=self.superuser)
+        state_info.make_transition('start_step_1', user=self.superuser, extra='django_states')
 
         # Test whether log entry was created
         StateLogModel = DjangoStateLogClass._state_log_model
         self.assertEqual(StateLogModel.objects.count(), 1)
         entry = StateLogModel.objects.all()[0]
         self.assertTrue(entry.completed)
+        self.assertEqual(entry.serialized_kwargs, '{"extra": "django_states"}')
+        self.assertEqual(entry.kwargs['extra'], 'django_states')
+        self.assertEqual(entry.from_state_definition.get_name(), 'start')
+        self.assertTrue(entry.from_state_definition.initial)
+        self.assertTrue('start' in entry.from_state_description.lower())
+        self.assertEqual(entry.to_state_definition.get_name(), 'first_step')
+        self.assertTrue('normal' in entry.to_state_description.lower())
+        self.assertTrue('from start to normal' in entry.transition_description.lower())
         # We should also be able to find this via
         self.assertEqual(test.get_state_transitions().count(), 1)
         self.assertEqual(len(test.get_public_state_transitions()), 1)
+
+    def test_statelog_kwargs_json_error(self):
+        test = DjangoStateLogClass(field1=42, field2="Hello world?")
+        test.save(no_state_validation=False)
+
+        # Verify the starting state.
+        state_info = test.get_state_info()
+        self.assertEqual(test.state, 'start')
+        self.assertEqual(state_info.name, test.state)
+
+        state_info.make_transition('start_step_1', hello=object())
+
+        # Test whether log entry was created
+        StateLogModel = DjangoStateLogClass._state_log_model
+        self.assertEqual(StateLogModel.objects.count(), 1)
+        entry = StateLogModel.objects.all()[0]
+        self.assertTrue(entry.completed)
+        self.assertEqual(entry.serialized_kwargs, 'null')
+        self.assertEqual(entry.kwargs, None)
+
+        # Without kwargs
+        test = DjangoStateLogClass(field1=42, field2="Hello world?")
+        test.save(no_state_validation=False)
+        test.get_state_info().make_transition('start_step_1')
+        self.assertEqual(test.get_state_transitions().count(), 1)
+        entry = test.get_state_transitions()[0]
+        self.assertTrue(entry.completed)
+        entry.serialized_kwargs = None
+        self.assertEqual(entry.kwargs, {})
+
+    def test_statelog_error(self):
+        test = DjangoStateLogClass(field1=42, field2="Hello world?")
+        test.save(no_state_validation=False)
+
+        # Verify the starting state.
+        state_info = test.get_state_info()
+        self.assertEqual(test.state, 'start')
+        self.assertEqual(state_info.name, test.state)
+        with self.assertRaises(TransitionCannotStart):
+            state_info.make_transition('step_1_final_step')
+
+        # Test whether log entry was created
+        StateLogModel = DjangoStateLogClass._state_log_model
+        self.assertEqual(StateLogModel.objects.count(), 1)
+        entry = StateLogModel.objects.all()[0]
+        self.assertFalse(entry.completed)
+
+    def test_statelog_handler_error(self):
+        test = DjangoStateLogClass(field1=42, field2="Hello world?")
+        test.save(no_state_validation=False)
+
+        # Verify the starting state.
+        state_info = test.get_state_info()
+        self.assertEqual(test.state, 'start')
+        self.assertEqual(state_info.name, test.state)
+        state_info.make_transition('start_step_1')
+        with self.assertRaises(Exception):
+            state_info.make_transition('step_1_final_step')
+
+        # Test whether log entry was created
+        StateLogModel = DjangoStateLogClass._state_log_model
+        self.assertEqual(StateLogModel.objects.count(), 2)
+        entry = StateLogModel.objects.all()[0]
+        self.assertTrue(entry.completed)
+        self.assertEqual(len(entry.kwargs), 0)
+        entry = StateLogModel.objects.all()[1]
+        self.assertFalse(entry.completed)
