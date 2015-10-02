@@ -35,9 +35,12 @@ class UnknownTransition(TransitionException):
 
 
 class TransitionNotFound(TransitionException):
-    def __init__(self, model, from_state, to_state):
-        TransitionException.__init__(self, "Transition from '%s' to '%s' on %s not found" %
-                    (from_state, to_state, model.__name__))
+    def __init__(self, model, from_state, to_state, transition_name=None):
+        if from_state is not None and to_state is not None:
+            msg = "Transition from '%s' to '%s' on %s not found" % (from_state, to_state, model.__name__)
+        else:
+            msg = "Transition with name '%s' on %s not found" % (transition_name, model.__name__)
+        TransitionException.__init__(self, msg)
 
 
 class TransitionCannotStart(TransitionException):
@@ -53,16 +56,32 @@ class TransitionNotValidated(TransitionException):
         self.validation_errors = validation_errors
 
 
-class MachineDefinitionException(States2Exception):
-    def __init__(self, machine, description):
-        States2Exception.__init__(self, 'Error in state machine definition: ' + description)
-
-
 class TransitionValidationError(TransitionException):
     """
     Errors yielded from StateTransition.validate.
     """
     pass
+
+# ==========[ Definition exceptions ]==========
+
+class DefinitionException(States2Exception):
+    pass
+
+class MachineDefinitionException(DefinitionException):
+    def __init__(self, machine, description):
+        DefinitionException.__init__(self, 'Error in state machine (%s) definition: %s' % (machine.__name__, description))
+
+class StateDefinitionException(DefinitionException):
+    def __init__(self, description):
+        DefinitionException.__init__(self, 'Error in state definition: ' + description)
+
+class GroupDefinitionException(DefinitionException):
+    def __init__(self, description):
+        DefinitionException.__init__(self, 'Error in state group definition: ' + description)
+
+class TransitionDefinitionException(DefinitionException):
+    def __init__(self, description):
+        DefinitionException.__init__(self, 'Error in state transition definition: ' + description)
 
 
 # ==========[ Other exceptions ]==========

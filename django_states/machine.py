@@ -8,7 +8,9 @@ import logging
 
 from django.contrib import messages
 from django_states.exceptions import (TransitionNotFound, TransitionValidationError,
-                                UnknownState, TransitionException, MachineDefinitionException)
+                                UnknownState, TransitionException,
+                                MachineDefinitionException, StateDefinitionException,
+                                GroupDefinitionException, TransitionDefinitionException)
 
 
 logger = logging.getLogger(__name__)
@@ -35,7 +37,7 @@ class StateMachineMeta(type):
                     if not initial_state:
                         initial_state = a
                     else:
-                        raise Exception('Machine defines multiple initial states')
+                        raise MachineDefinitionException(c, 'Machine defines multiple initial states')
 
             # All transitions are derived from StateTransition and should be
             # addressable by Machine.transitions
@@ -78,6 +80,19 @@ class StateMachineMeta(type):
         """
         return transition_name in self.transitions
 
+    def get_transition(self, transition_name):
+        """
+        Gets a transition with the given name.
+
+        :param str transition_name: the transition name
+
+        :returns: the :class:`StateTransition` or raises a :class:`TransitionNotFound`
+        """
+        try:
+            return self.transitions[transition_name]
+        except KeyError:
+            raise TransitionNotFound(self, None, None, transition_name)
+
     def get_transitions(self, transition_name):
         """
         Gets a transition with the given name.
@@ -86,6 +101,9 @@ class StateMachineMeta(type):
 
         :returns: the :class:`StateTransition` or raises a :class:`KeyError`
         """
+        import warnings
+        warnings.warn("%s.get_transitions is deprecated, use `get_transition` instead.",
+                      DeprecationWarning, 2)
         return self.transitions[transition_name]
 
     def has_state(self, state_name):
@@ -154,12 +172,12 @@ class StateDefinitionMeta(type):
         """
         if bases != (object,):
             if name.lower() != name and not attrs.get('abstract', False):
-                raise Exception('Please use lowercase names for state definitions (instead of %s)' % name)
+                raise StateDefinitionException('Please use lowercase names for state definitions (instead of %s)' % name)
             if not 'description' in attrs and not attrs.get('abstract', False):
-                raise Exception('Please give a description to this state definition')
+                raise StateDefinitionException('Please give a description to this state definition')
 
         if 'handler' in attrs and len(attrs['handler'].func_code.co_varnames) < 2:
-            raise Exception('StateDefinition handler needs at least two arguments')
+            raise StateDefinitionException('StateDefinition handler needs at least two arguments')
 
         # Turn `handler` into classmethod
         if 'handler' in attrs:
@@ -176,14 +194,14 @@ class StateGroupMeta(type):
         if bases != (object,):
             # check attributes
             if 'states' in attrs and 'exclude_states' in attrs:
-                raise Exception('Use either states or exclude_states but not both')
+                raise GroupDefinitionException('Use either states or exclude_states but not both')
             elif not 'states' in attrs and not 'exclude_states' in attrs:
-                raise Exception('Please specify states or exclude_states to this state group')
+                raise GroupDefinitionException('Please specify states or exclude_states to this state group')
             # check type of attributes
             if 'exclude_states' in attrs and not isinstance(attrs['exclude_states'], (list, set)):
-                raise Exception('Please give a list (or set) of states to this state group')
+                raise GroupDefinitionException('Please give a list (or set) of states to this state group')
             elif 'states' in attrs and not isinstance(attrs['states'], (list, set)):
-                raise Exception('Please give a list (or set) of states to this state group')
+                raise GroupDefinitionException('Please give a list (or set) of states to this state group')
 
         return type.__new__(c, name, bases, attrs)
 
@@ -195,19 +213,19 @@ class StateTransitionMeta(type):
         """
         if bases != (object,):
             if 'from_state' in attrs and 'from_states' in attrs:
-                raise Exception('Please use either from_state or from_states')
+                raise TransitionDefinitionException('Please use either from_state or from_states')
             if 'from_state' in attrs:
                 attrs['from_states'] = (attrs['from_state'],)
                 del attrs['from_state']
             if not 'from_states' in attrs:
-                raise Exception('Please give a from_state to this state transition')
+                raise TransitionDefinitionException('Please give a from_state to this state transition')
             if not 'to_state' in attrs:
-                raise Exception('Please give a from_state to this state transition')
+                raise TransitionDefinitionException('Please give a to_state to this state transition')
             if not 'description' in attrs:
-                raise Exception('Please give a description to this state transition')
+                raise TransitionDefinitionException('Please give a description to this state transition')
 
         if 'handler' in attrs and len(attrs['handler'].func_code.co_varnames) < 3:
-            raise Exception('StateTransition handler needs at least three arguments')
+            raise TransitionDefinitionException('StateTransition handler needs at least three arguments')
 
         # Turn `has_permission` and `handler` into classmethods
         for m in ('has_permission', 'handler', 'validate'):

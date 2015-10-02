@@ -4,8 +4,16 @@ from django.contrib.auth.models import AnonymousUser, User
 from django.db import models
 from django.test import TransactionTestCase
 
-from django_states.exceptions import (PermissionDenied, TransitionNotFound,
-                                      UnknownState, UnknownTransition)
+from django_states.exceptions import (GroupDefinitionException,
+                                      MachineDefinitionException,
+                                      PermissionDenied,
+                                      StateDefinitionException,
+                                      TransitionCannotStart,
+                                      TransitionDefinitionException,
+                                      TransitionNotFound,
+                                      TransitionOnUnsavedObject,
+                                      UnknownState,
+                                      UnknownTransition)
 from django_states.fields import StateField
 from django_states.machine import (StateDefinition, StateGroup, StateMachine,
                                    StateTransition)
@@ -100,12 +108,18 @@ class TestLogMachine(StateMachine):
         def has_permission(cls, instance, user):
             return True
 
+        def handler(cls, instance, user=None, **kwargs):
+            return
+
     class step_1_final_step(StateTransition):
         """Transition from normal to complete"""
         from_state = 'first_step'
         to_state = 'final_step'
         description = "Transition from normal to complete"
         public = True
+
+        def handler(cls, instance, user=None, **kwargs):
+            raise Exception
 
 # ----- Django Test Models ------
 
@@ -138,7 +152,7 @@ class DjangoStateLogClass(models.Model):
 class StateMachineTestCase(TransactionTestCase):
 
     def test_initial_states(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(MachineDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -148,7 +162,7 @@ class StateMachineTestCase(TransactionTestCase):
                     description = 'running state'
                     initial = True
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(MachineDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -156,18 +170,18 @@ class StateMachineTestCase(TransactionTestCase):
                 class running(StateDefinition):
                     description = 'running state'
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(StateDefinitionException):
             class T1Machine(StateMachine):
                 class START(StateDefinition):
                     description = 'start state'
                     initial = True
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(StateDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     initial = True
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(GroupDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -179,7 +193,7 @@ class StateMachineTestCase(TransactionTestCase):
                 class not_runing(StateGroup):
                     pass
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(GroupDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -192,7 +206,7 @@ class StateMachineTestCase(TransactionTestCase):
                     states = ['start']
                     exclude_states = ['running']
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(GroupDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -204,7 +218,7 @@ class StateMachineTestCase(TransactionTestCase):
                 class not_runing(StateGroup):
                     states = 'start'
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(GroupDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -216,7 +230,7 @@ class StateMachineTestCase(TransactionTestCase):
                 class not_runing(StateGroup):
                     exclude_states = 'running'
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(TransitionDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -230,7 +244,7 @@ class StateMachineTestCase(TransactionTestCase):
                     to_state = 'running'
                     description = 'Start up the machine!'
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(TransitionDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -246,7 +260,7 @@ class StateMachineTestCase(TransactionTestCase):
                     to_state = 'running'
                     description = 'Start up the machine!'
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(TransitionDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -260,7 +274,7 @@ class StateMachineTestCase(TransactionTestCase):
                     from_state = 'start'
                     description = 'Start up the machine!'
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(TransitionDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -274,7 +288,7 @@ class StateMachineTestCase(TransactionTestCase):
                     from_state = 'start'
                     to_state = 'running'
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(StateDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -286,7 +300,7 @@ class StateMachineTestCase(TransactionTestCase):
                     def handler(self):
                         pass
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(TransitionDefinitionException):
             class T1Machine(StateMachine):
                 class start(StateDefinition):
                     description = 'start state'
@@ -367,6 +381,9 @@ class StateMachineTestCase(TransactionTestCase):
         self.assertEqual(trion.to_state, 'crashed')
         self.assertEqual(len(trion.handler_kwargs()), 1)
         self.assertEqual(trion.handler_kwargs()[0], 'reason')
+        with self.assertRaises(TransitionNotFound):
+            T3Machine.get_transition('stop')
+        # Deprecated methods
         with self.assertRaises(KeyError):
             T3Machine.get_transitions('stop')
         # Admin actions
@@ -419,6 +436,9 @@ class StateFieldTestCase(TransactionTestCase):
         self.assertEqual(state_info.description, 'Starting State.')
         possible = set([x.get_name() for x in state_info.possible_transitions])
         self.assertEqual(possible, {'start_step_1'})
+        # TransitionCannotStart
+        with self.assertRaises(TransitionCannotStart):
+            state_info.test_transition('step_1_step_3')
         # Shift to the first state
         state_info.make_transition('start_step_1', user=self.superuser)
         self.assertEqual(state_info.name, 'step_1')
@@ -484,6 +504,8 @@ class StateFieldTestCase(TransactionTestCase):
 
         state_info = test.get_state_info()
         with self.assertRaises(UnknownTransition):
+            state_info.test_transition('i_dont_exist')
+        with self.assertRaises(UnknownTransition):
             state_info.make_transition('unknown_transition', user=self.superuser)
 
     def test_unknown_state(self):
@@ -522,6 +544,14 @@ class StateModelTestCase(TransactionTestCase):
         self.assertTrue('start' in state_choices)
         self.assertEqual(state_choices['start'], 'Starting State.')
 
+    def test_unsaved_model(self):
+        test = DjangoStateClass(field1=42, field2="Knock? Knock?")
+        self.assertFalse(test.can_make_transition('start_step_1', user=self.superuser))
+        with self.assertRaises(TransitionOnUnsavedObject):
+            test.test_transition('start_step_1', user=self.superuser)
+        with self.assertRaises(TransitionOnUnsavedObject):
+            test.make_transition('start_step_1', user=self.superuser)
+
     def test_model_end_to_end(self):
         test = DjangoStateClass(field1=42, field2="Knock? Knock?")
         test.save()
@@ -556,13 +586,21 @@ class StateLogTestCase(TransactionTestCase):
         self.assertEqual(test.state, 'start')
         self.assertEqual(state_info.name, test.state)
         # Make transition
-        state_info.make_transition('start_step_1', user=self.superuser)
+        state_info.make_transition('start_step_1', user=self.superuser, extra='django_states')
 
         # Test whether log entry was created
         StateLogModel = DjangoStateLogClass._state_log_model
         self.assertEqual(StateLogModel.objects.count(), 1)
         entry = StateLogModel.objects.all()[0]
         self.assertTrue(entry.completed)
+        self.assertEqual(entry.serialized_kwargs, '{"extra": "django_states"}')
+        self.assertEqual(entry.kwargs['extra'], 'django_states')
+        self.assertEqual(entry.from_state_definition.get_name(), 'start')
+        self.assertTrue(entry.from_state_definition.initial)
+        self.assertTrue('start' in entry.from_state_description.lower())
+        self.assertEqual(entry.to_state_definition.get_name(), 'first_step')
+        self.assertTrue('normal' in entry.to_state_description.lower())
+        self.assertTrue('from start to normal' in entry.transition_description.lower())
         # We should also be able to find this via
         self.assertEqual(test.get_state_transitions().count(), 1)
         self.assertEqual(len(test.get_public_state_transitions()), 1)
@@ -586,3 +624,70 @@ class StateLogTestCase(TransactionTestCase):
         # We should also be able to find this via
         self.assertEqual(test.get_state_transitions().count(), 1)
         self.assertEqual(len(test.get_public_state_transitions()), 1)
+
+    def test_statelog_kwargs_json_error(self):
+        test = DjangoStateLogClass(field1=42, field2="Hello world?")
+        test.save(no_state_validation=False)
+
+        # Verify the starting state.
+        state_info = test.get_state_info()
+        self.assertEqual(test.state, 'start')
+        self.assertEqual(state_info.name, test.state)
+
+        state_info.make_transition('start_step_1', hello=object())
+
+        # Test whether log entry was created
+        StateLogModel = DjangoStateLogClass._state_log_model
+        self.assertEqual(StateLogModel.objects.count(), 1)
+        entry = StateLogModel.objects.all()[0]
+        self.assertTrue(entry.completed)
+        self.assertEqual(entry.serialized_kwargs, 'null')
+        self.assertEqual(entry.kwargs, None)
+
+        # Without kwargs
+        test = DjangoStateLogClass(field1=42, field2="Hello world?")
+        test.save(no_state_validation=False)
+        test.get_state_info().make_transition('start_step_1')
+        self.assertEqual(test.get_state_transitions().count(), 1)
+        entry = test.get_state_transitions()[0]
+        self.assertTrue(entry.completed)
+        entry.serialized_kwargs = None
+        self.assertEqual(entry.kwargs, {})
+
+    def test_statelog_error(self):
+        test = DjangoStateLogClass(field1=42, field2="Hello world?")
+        test.save(no_state_validation=False)
+
+        # Verify the starting state.
+        state_info = test.get_state_info()
+        self.assertEqual(test.state, 'start')
+        self.assertEqual(state_info.name, test.state)
+        with self.assertRaises(TransitionCannotStart):
+            state_info.make_transition('step_1_final_step')
+
+        # Test whether log entry was created
+        StateLogModel = DjangoStateLogClass._state_log_model
+        self.assertEqual(StateLogModel.objects.count(), 1)
+        entry = StateLogModel.objects.all()[0]
+        self.assertFalse(entry.completed)
+
+    def test_statelog_handler_error(self):
+        test = DjangoStateLogClass(field1=42, field2="Hello world?")
+        test.save(no_state_validation=False)
+
+        # Verify the starting state.
+        state_info = test.get_state_info()
+        self.assertEqual(test.state, 'start')
+        self.assertEqual(state_info.name, test.state)
+        state_info.make_transition('start_step_1')
+        with self.assertRaises(Exception):
+            state_info.make_transition('step_1_final_step')
+
+        # Test whether log entry was created
+        StateLogModel = DjangoStateLogClass._state_log_model
+        self.assertEqual(StateLogModel.objects.count(), 2)
+        entry = StateLogModel.objects.all()[0]
+        self.assertTrue(entry.completed)
+        self.assertEqual(len(entry.kwargs), 0)
+        entry = StateLogModel.objects.all()[1]
+        self.assertFalse(entry.completed)
