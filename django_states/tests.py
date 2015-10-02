@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests"""
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AnonymousUser, User
 from django.db import models
 from django.test import TransactionTestCase
 
@@ -97,6 +97,9 @@ class TestLogMachine(StateMachine):
         description = "Transition from start to normal"
         public = True
 
+        def has_permission(cls, instance, user):
+            return True
+
     class step_1_final_step(StateTransition):
         """Transition from normal to complete"""
         from_state = 'first_step'
@@ -119,7 +122,7 @@ class DjangoState2Class(models.Model):
     field1 = models.IntegerField()
     field2 = models.CharField(max_length=25)
 
-    state = StateField(machine=TestMachine)
+    state = StateField('statefield', machine=TestMachine)
 
 
 class DjangoStateLogClass(models.Model):
@@ -322,6 +325,15 @@ class StateMachineTestCase(TransactionTestCase):
                 to_state = 'running'
                 description = 'Start up the machine!'
 
+            class crash(StateTransition):
+                '''Transition from stopped to running'''
+                from_states = ['running']
+                to_state = 'crashed'
+                description = 'Crash the machine!'
+
+                def handler(self, instance, user=None, reason=None):
+                    pass
+
             class working(StateGroup):
                 states = ['running']
 
@@ -342,23 +354,34 @@ class StateMachineTestCase(TransactionTestCase):
 
         T3Machine.get_transition_from_states('stopped', 'running')
         with self.assertRaises(TransitionNotFound):
-            T3Machine.get_transition_from_states('running', 'crashed')
+            T3Machine.get_transition_from_states('running', 'stopped')
         self.assertTrue(T3Machine.has_transition('startup'))
-        self.assertFalse(T3Machine.has_transition('crash'))
+        self.assertFalse(T3Machine.has_transition('stop'))
         trion = T3Machine.get_transitions('startup')
         self.assertFalse(hasattr(trion, 'from_state'))
         self.assertEqual(trion.from_states[0], 'stopped')
         self.assertEqual(trion.to_state, 'running')
+        trion = T3Machine.get_transitions('crash')
+        self.assertFalse(hasattr(trion, 'from_state'))
+        self.assertEqual(trion.from_states[0], 'running')
+        self.assertEqual(trion.to_state, 'crashed')
+        self.assertEqual(len(trion.handler_kwargs()), 1)
+        self.assertEqual(trion.handler_kwargs()[0], 'reason')
         with self.assertRaises(KeyError):
-            T3Machine.get_transitions('crash')
+            T3Machine.get_transitions('stop')
         # Admin actions
         actions = T3Machine.get_admin_actions()
-        self.assertEqual(len(actions), 1)
-        action = actions[0]
+        self.assertEqual(len(actions), 2)
+        action = filter(lambda a: a.__name__ == 'state_transition_startup', actions)[0]
         self.assertEqual(action.__name__, 'state_transition_startup')
         self.assertTrue('stopped' in action.short_description)
         self.assertTrue('running' in action.short_description)
         self.assertTrue('Start up the machine!' in action.short_description)
+        action = filter(lambda a: a.__name__ == 'state_transition_crash', actions)[0]
+        self.assertEqual(action.__name__, 'state_transition_crash')
+        self.assertTrue('crashed' in action.short_description)
+        self.assertTrue('running' in action.short_description)
+        self.assertTrue('Crash the machine!' in action.short_description)
 
 
 class StateFieldTestCase(TransactionTestCase):
@@ -429,10 +452,12 @@ class StateFieldTestCase(TransactionTestCase):
         testclass = DjangoState2Class(field1=100, field2="LALALALALA")
         testclass.save()
 
-        kwargs = {'transition': 'start_step_1', 'user': user}
-
         state_info = testclass.get_state_info()
 
+        kwargs = {'transition': 'start_step_1', 'user': user}
+        self.assertRaises(PermissionDenied, state_info.make_transition, **kwargs)
+
+        kwargs = {'transition': 'start_step_1', 'user': AnonymousUser()}
         self.assertRaises(PermissionDenied, state_info.make_transition, **kwargs)
 
     def test_in_group(self):
@@ -532,6 +557,26 @@ class StateLogTestCase(TransactionTestCase):
         self.assertEqual(state_info.name, test.state)
         # Make transition
         state_info.make_transition('start_step_1', user=self.superuser)
+
+        # Test whether log entry was created
+        StateLogModel = DjangoStateLogClass._state_log_model
+        self.assertEqual(StateLogModel.objects.count(), 1)
+        entry = StateLogModel.objects.all()[0]
+        self.assertTrue(entry.completed)
+        # We should also be able to find this via
+        self.assertEqual(test.get_state_transitions().count(), 1)
+        self.assertEqual(len(test.get_public_state_transitions()), 1)
+
+    def test_statelog_anonymous(self):
+        test = DjangoStateLogClass(field1=42, field2="Hello world?")
+        test.save(no_state_validation=False)
+
+        # Verify the starting state.
+        state_info = test.get_state_info()
+        self.assertEqual(test.state, 'start')
+        self.assertEqual(state_info.name, test.state)
+        # Make transition
+        state_info.make_transition('start_step_1', user=AnonymousUser())
 
         # Test whether log entry was created
         StateLogModel = DjangoStateLogClass._state_log_model

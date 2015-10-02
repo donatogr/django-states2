@@ -364,6 +364,6 @@ class StateTransition(object):
         """
         return cls.__name__
 
-    @property
-    def handler_kwargs(self):
-        return self.handler.func_code.co_varnames[3:]
+    @classmethod
+    def handler_kwargs(cls):
+        return cls.handler.func_code.co_varnames[3:]
