@@ -2,6 +2,7 @@
 """Views"""
 import json
 
+from django.apps import apps
 from django.contrib.admindocs.views import ModelDetailView
 from django.db.models import FieldDoesNotExist
 from django.http import (Http404, HttpResponse, HttpResponseForbidden,
@@ -11,12 +12,6 @@ from django.utils.safestring import mark_safe
 
 from django_states.exceptions import PermissionDenied
 from django_states.utils import graph_elements_for_model
-
-try:
-    from django.apps import apps
-    get_model = apps.get_model
-except ImportError:
-    from django.db.models import get_model
 
 
 class StateMachineView(ModelDetailView):
@@ -31,7 +26,7 @@ class StateMachineView(ModelDetailView):
 
 def get_state_machine_graph_elements(app_label, model_name, field_name, **kwargs):
     try:
-        model_class = get_model(app_label, model_name)
+        model_class = apps.get_model(app_label, model_name)
     except LookupError:
         raise Http404
 
@@ -64,7 +59,7 @@ def make_state_transition(request):
         # Process post parameters
         app_label, model_name = request.POST['model_name'].split('.')
         try:
-            model = get_model(app_label, model_name)
+            model = apps.get_model(app_label, model_name)
         except LookupError:
             model = None
         instance = get_object_or_404(model, id=request.POST['id'])

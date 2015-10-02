@@ -6,6 +6,7 @@ from django.contrib.auth.models import AnonymousUser, User
 from django.db import models
 from django.test import TransactionTestCase
 
+import django_states.urls
 from django_states.exceptions import (GroupDefinitionException,
                                       MachineDefinitionException,
                                       PermissionDenied,

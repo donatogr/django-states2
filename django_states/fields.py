@@ -114,21 +114,3 @@ class StateField(models.CharField):
             return result
 
         sender.save = new_save
-
-
-# South introspection
-try:
-    from south.modelsinspector import add_introspection_rules
-except ImportError:
-    pass
-else:
-    add_introspection_rules([
-        (
-            (StateField,),
-            [],
-            {
-                'max_length': [100, {"is_value": True}],
-            },
-        ),
-
-    ], ["^django_states\.fields\.StateField"])
