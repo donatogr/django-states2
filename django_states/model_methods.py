@@ -198,6 +198,7 @@ def get_STATE_info(self, field='state', machine=None):
                                           instance=self,
                                           from_state=from_state,
                                           to_state=t.to_state,
+                                          transition=transition,
                                           user=user)
                 # First call handler (handler should still see the original
                 # state.)
@@ -210,6 +211,7 @@ def get_STATE_info(self, field='state', machine=None):
                                          instance=self,
                                          from_state=from_state,
                                          to_state=t.to_state,
+                                         transition=transition,
                                          user=user)
             except Exception, e:
                 if _state_log_model:
