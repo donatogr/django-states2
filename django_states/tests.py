@@ -4,6 +4,7 @@ import json
 
 from django.contrib.auth.models import AnonymousUser, User
 from django.db import models
+from django.dispatch import receiver
 from django.test import TransactionTestCase
 
 import django_states.urls
@@ -21,8 +22,9 @@ from django_states.fields import StateField
 from django_states.machine import (StateDefinition, StateGroup, StateMachine,
                                    StateTransition)
 from django_states.models import StateModel
-from django_states.views import get_state_machine_graph_elements
+from django_states.signals import before_state_execute, after_state_execute
 from django_states.utils import graph_elements, graph_elements_for_model
+from django_states.views import get_state_machine_graph_elements
 
 
 class TestMachine(StateMachine):
@@ -142,6 +144,11 @@ class DjangoState2Class(models.Model):
     field2 = models.CharField(max_length=25)
 
     state = StateField('statefield', machine=TestMachine)
+
+
+class DjangoState3Class(models.Model):
+    """Django Test Model implementing a State Machine used since django-states2"""
+    state = StateField(machine=TestMachine)
 
 
 class DjangoStateLogClass(models.Model):
@@ -429,7 +436,10 @@ class StateFieldTestCase(TransactionTestCase):
 
         self.assertEqual(testclass.state, 'start')
         self.assertTrue(state_info.initial)
-        state_info.make_transition('start_step_1', user=self.superuser)
+        state_info.test_transition('start_step_1', user=self.superuser)
+        with self.assertRaises(PermissionDenied):
+            state_info.test_transition('start_step_1', user=User(username='user1'))
+        state_info.test_transition('start_step_1', user=self.superuser).make_transition('start_step_1', user=self.superuser)
         self.assertFalse(state_info.initial)
 
     def test_end_to_end(self):
@@ -709,3 +719,46 @@ class StateLogTestCase(TransactionTestCase):
         self.assertEqual(len(entry.kwargs), 0)
         entry = StateLogModel.objects.all()[1]
         self.assertFalse(entry.completed)
+
+class EventsTestCase(TransactionTestCase):
+    def test_signals(self):
+        @receiver(before_state_execute, sender=DjangoState3Class)
+        def before_handler(sender, **kwargs):
+            self.assertTrue('from_state' in kwargs)
+            self.assertTrue('to_state' in kwargs)
+            self.assertTrue('transition' in kwargs)
+            self.assertTrue('user' in kwargs)
+            self.assertEquals(kwargs['user'], None)
+            self.assertEquals(kwargs['from_state'], 'start')
+            self.assertEquals(kwargs['to_state'], 'step_1')
+            self.assertEquals(kwargs['transition'], 'start_step_1')
+            self.ran_before = True
+
+        @receiver(after_state_execute, sender=DjangoState3Class)
+        def after_handler(sender, **kwargs):
+            self.assertTrue('from_state' in kwargs)
+            self.assertTrue('to_state' in kwargs)
+            self.assertTrue('transition' in kwargs)
+            self.assertTrue('user' in kwargs)
+            self.assertEquals(kwargs['user'], None)
+            self.assertEquals(kwargs['from_state'], 'start')
+            self.assertEquals(kwargs['to_state'], 'step_1')
+            self.assertEquals(kwargs['transition'], 'start_step_1')
+            self.ran_after = True
+
+        self.ran_before = False
+        self.ran_after = False
+
+        testclass = DjangoState3Class.objects.create()
+        self.assertEqual(testclass.get_state_machine(), TestMachine)
+        self.assertEqual(testclass.get_state_display(), 'Starting State.')
+
+        state_info = testclass.get_state_info()
+        self.assertEqual(testclass.state, 'start')
+        self.assertTrue(state_info.initial)
+
+        state_info.make_transition('start_step_1')
+        self.assertFalse(state_info.initial)
+
+        self.assertTrue(self.ran_before)
+        self.assertTrue(self.ran_after)
